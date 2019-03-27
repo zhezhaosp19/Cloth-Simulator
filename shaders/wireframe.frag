@@ -1,12 +1,12 @@
 #version 330
 
-uniform vec4 in_color;
+uniform vec4 u_color;
 
-in vec4 vertex;
-in vec4 normal;
+in vec4 v_position;
+in vec4 v_normal;
 
-out vec4 color;
+out vec4 out_color;
 
 void main() {
-  color = in_color;
+  out_color = u_color;
 }

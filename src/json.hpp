@@ -63,7 +63,7 @@ SOFTWARE.
         #error "unsupported Clang version - see https://github.com/nlohmann/json#supported-compilers"
     #endif
 #elif defined(__GNUC__)
-    #if (__GNUC__ * 10000 + __GNUC_MINOR__ * 100 + __GNUC_PATCHLEVEL__) < 40800
+    #if (__GNUC__ * 10000 + __GNUC_MINOR__ * 100 + __GNUC_PATCHLEVEL__) < 40900
         #error "unsupported GCC version - see https://github.com/nlohmann/json#supported-compilers"
     #endif
 #endif
@@ -6054,7 +6054,7 @@ class basic_json
             {
                 case value_t::array:
                 {
-                    return *lhs.m_value.array < *rhs.m_value.array;
+                    return (*lhs.m_value.array) < *rhs.m_value.array;
                 }
                 case value_t::object:
                 {

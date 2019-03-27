@@ -9,9 +9,12 @@
 
 using namespace nanogui;
 
+struct UserShader;
+enum ShaderTypeHint { WIREFRAME = 0, NORMALS = 1, PHONG = 2 };
+
 class ClothSimulator {
 public:
-  ClothSimulator(Screen *screen);
+  ClothSimulator(std::string project_root, Screen *screen);
   ~ClothSimulator();
 
   void init();
@@ -36,6 +39,13 @@ private:
   void drawWireframe(GLShader &shader);
   void drawNormals(GLShader &shader);
   void drawPhong(GLShader &shader);
+  
+  void load_shaders();
+  void load_textures();
+  
+  // File management
+  
+  std::string m_project_root;
 
   // Camera methods
 
@@ -49,7 +59,7 @@ private:
   int simulation_steps = 30;
 
   CGL::Vector3D gravity = CGL::Vector3D(0, -9.8, 0);
-  nanogui::Color color = nanogui::Color(1.0f, 0.0f, 0.0f, 1.0f);
+  nanogui::Color color = nanogui::Color(1.0f, 1.0f, 1.0f, 1.0f);
 
   Cloth *cloth;
   ClothParameters *cp;
@@ -57,14 +67,27 @@ private:
 
   // OpenGL attributes
 
-  enum e_shader { WIREFRAME = 0, NORMALS = 1, PHONG = 2 };
-  e_shader activeShader = WIREFRAME;
+  int active_shader_idx = 0;
 
-  vector<GLShader> shaders;
-
-  GLShader wireframeShader;
-  GLShader normalShader;
-  GLShader phongShader;
+  vector<UserShader> shaders;
+  vector<std::string> shaders_combobox_names;
+  
+  // OpenGL textures
+  
+  Vector3D m_gl_texture_1_size;
+  Vector3D m_gl_texture_2_size;
+  Vector3D m_gl_texture_3_size;
+  Vector3D m_gl_texture_4_size;
+  GLuint m_gl_texture_1;
+  GLuint m_gl_texture_2;
+  GLuint m_gl_texture_3;
+  GLuint m_gl_texture_4;
+  GLuint m_gl_cubemap_tex;
+  
+  // OpenGL customizable inputs
+  
+  double m_normal_scaling = 2.0;
+  double m_height_scaling = 0.1;
 
   // Camera attributes
 
@@ -97,7 +120,7 @@ private:
 
   // Simulation flags
 
-  bool is_paused = false;
+  bool is_paused = true;
 
   // Screen attributes
 
@@ -110,6 +133,19 @@ private:
   bool is_alive = true;
 
   Vector2i default_window_size = Vector2i(1024, 800);
+};
+
+struct UserShader {
+  UserShader(std::string display_name, GLShader nanogui_shader, ShaderTypeHint type_hint)
+  : display_name(display_name)
+  , nanogui_shader(nanogui_shader)
+  , type_hint(type_hint) {
+  }
+  
+  GLShader nanogui_shader;
+  std::string display_name;
+  ShaderTypeHint type_hint;
+  
 };
 
 #endif // CGL_CLOTH_SIM_H

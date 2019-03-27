@@ -17,10 +17,19 @@ set(CLOTHSIM_VIEWER_SOURCE
     # Miscellaneous
     # png.cpp
     misc/sphere_drawing.cpp
+    misc/file_utils.cpp
 
     # Camera
     camera.cpp
 )
+
+# Windows-only sources
+if(WIN32)
+list(APPEND CLOTHSIM_VIEWER_SOURCE
+    # For get-opt
+    misc/getopt.c
+)
+endif(WIN32)
 
 #-------------------------------------------------------------------------------
 # Embed resources

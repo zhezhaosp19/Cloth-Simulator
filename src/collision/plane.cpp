@@ -11,7 +11,7 @@ using namespace CGL;
 #define SURFACE_OFFSET 0.0001
 
 void Plane::collide(PointMass &pm) {
-  // TODO (Part 3.2): Handle collisions with planes.
+  // TODO (Part 3): Handle collisions with planes.
 
 }
 
@@ -38,11 +38,13 @@ void Plane::render(GLShader &shader) {
   normals.col(2) << sNormal;
   normals.col(3) << sNormal;
 
-  if (shader.uniform("in_color", false) != -1) {
-    shader.setUniform("in_color", color);
+  if (shader.uniform("u_color", false) != -1) {
+    shader.setUniform("u_color", color);
   }
   shader.uploadAttrib("in_position", positions);
-  shader.uploadAttrib("in_normal", normals);
+  if (shader.attrib("in_normal", false) != -1) {
+    shader.uploadAttrib("in_normal", normals);
+  }
 
   shader.drawArray(GL_TRIANGLE_STRIP, 0, 4);
 }

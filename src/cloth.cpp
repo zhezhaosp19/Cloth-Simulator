@@ -31,10 +31,7 @@ Cloth::~Cloth() {
 }
 
 void Cloth::buildGrid() {
-  // TODO (Part 1.1): Build a grid of masses.
-  
-
-  // TODO (Part 1.2): Add springs 
+  // TODO (Part 1): Build a grid of masses and springs.
 
 }
 
@@ -44,52 +41,39 @@ void Cloth::simulate(double frames_per_sec, double simulation_steps, ClothParame
   double mass = width * height * cp->density / num_width_points / num_height_points;
   double delta_t = 1.0f / frames_per_sec / simulation_steps;
 
-  // TODO (Part 2.1): Compute total force acting on each point mass.
+  // TODO (Part 2): Compute total force acting on each point mass.
 
 
-  // TODO (Part 2.2): Use Verlet integration to compute new point mass positions
+  // TODO (Part 2): Use Verlet integration to compute new point mass positions
 
 
-
-  // This won't do anything until you complete Part 4.
-  build_spatial_map();
-  for (PointMass &pm : point_masses) {
-    self_collide(pm, simulation_steps);
-  }
-
-  // This won't do anything until you complete Part 3.
-  for (PointMass &pm : point_masses) {
-    for (CollisionObject *co : *collision_objects) {
-      co->collide(pm);
-    }
-  }
+  // TODO (Part 4): Handle self-collisions.
 
 
-  // TODO (Part 2.3): Constrain the changes to be such that the spring does not change
+  // TODO (Part 3): Handle collisions with other primitives.
+
+
+  // TODO (Part 2): Constrain the changes to be such that the spring does not change
   // in length more than 10% per timestep [Provot 1995].
 
 }
 
 void Cloth::build_spatial_map() {
-  for (const auto &entry : map) {
-    delete(entry.second);
-  }
   map.clear();
 
-  // TODO (Part 4.2): Build a spatial map out of all of the point masses.
+  // TODO (Part 4): Build a spatial map out of all of the point masses.
 
 }
 
 void Cloth::self_collide(PointMass &pm, double simulation_steps) {
-  // TODO (Part 4.3): Handle self-collision for a given point mass.
+  // TODO (Part 4): Handle self-collision for a given point mass.
 
 }
 
 float Cloth::hash_position(Vector3D pos) {
-  // TODO (Part 4.1): Hash a 3D position into a unique float identifier that represents
-  // membership in some uniquely identified 3D box volume.
+  // TODO (Part 4): Hash a 3D position into a unique float identifier that represents membership in some 3D box volume.
 
-  return 0.f;
+  return 0.f; 
 }
 
 ///////////////////////////////////////////////////////
@@ -115,10 +99,46 @@ void Cloth::buildClothMesh() {
   for (int y = 0; y < num_height_points - 1; y++) {
     for (int x = 0; x < num_width_points - 1; x++) {
       PointMass *pm = &point_masses[y * num_width_points + x];
+      // Get neighboring point masses:
+      /*                      *
+       * pm_A -------- pm_B   *
+       *             /        *
+       *  |         /   |     *
+       *  |        /    |     *
+       *  |       /     |     *
+       *  |      /      |     *
+       *  |     /       |     *
+       *  |    /        |     *
+       *      /               *
+       * pm_C -------- pm_D   *
+       *                      *
+       */
+      
+      float u_min = x;
+      u_min /= num_width_points - 1;
+      float u_max = x + 1;
+      u_max /= num_width_points - 1;
+      float v_min = y;
+      v_min /= num_height_points - 1;
+      float v_max = y + 1;
+      v_max /= num_height_points - 1;
+      
+      PointMass *pm_A = pm                       ;
+      PointMass *pm_B = pm                    + 1;
+      PointMass *pm_C = pm + num_width_points    ;
+      PointMass *pm_D = pm + num_width_points + 1;
+      
+      Vector3D uv_A = Vector3D(u_min, v_min, 0);
+      Vector3D uv_B = Vector3D(u_max, v_min, 0);
+      Vector3D uv_C = Vector3D(u_min, v_max, 0);
+      Vector3D uv_D = Vector3D(u_max, v_max, 0);
+      
+      
       // Both triangles defined by vertices in counter-clockwise orientation
-      triangles.push_back(new Triangle(pm, pm + num_width_points, pm + 1));
-      triangles.push_back(new Triangle(pm + 1, pm + num_width_points,
-                                       pm + num_width_points + 1));
+      triangles.push_back(new Triangle(pm_A, pm_C, pm_B, 
+                                       uv_A, uv_C, uv_B));
+      triangles.push_back(new Triangle(pm_B, pm_C, pm_D, 
+                                       uv_B, uv_C, uv_D));
     }
   }
 

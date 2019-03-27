@@ -6,62 +6,69 @@
 #include "CGL/color.h"
 #include "CGL/vector3D.h"
 
-// Static data describing points on a sphere
-#define SPHERE_NUM_LAT 40
-#define SPHERE_NUM_LON 40
-
-#define SPHERE_NUM_VERTICES ((SPHERE_NUM_LAT + 1) * (SPHERE_NUM_LON + 1))
-#define SPHERE_NUM_INDICES (6 * SPHERE_NUM_LAT * SPHERE_NUM_LON)
-#define SINDEX(x, y) ((x) * (SPHERE_NUM_LON + 1) + (y))
-#define VERTEX_SIZE 8
 #define TCOORD_OFFSET 0
 #define NORMAL_OFFSET 2
 #define VERTEX_OFFSET 5
-#define BUMP_FACTOR 1
-
-static unsigned int Indices[SPHERE_NUM_INDICES];
-static double Vertices[VERTEX_SIZE * SPHERE_NUM_VERTICES];
-static bool initialized = false;
-static double vertices[3 * SPHERE_NUM_VERTICES];
-static double normals[3 * SPHERE_NUM_VERTICES];
+#define TANGEN_OFFSET 8
+#define VERTEX_SIZE 11
 
 using namespace nanogui;
 
 namespace CGL {
 namespace Misc {
 
-static void init_mesh();
-static void draw_sphere(const Vector3D &p, double r);
+SphereMesh::SphereMesh(int num_lat, int num_lon)
+: sphere_num_lat(num_lat)
+, sphere_num_lon(num_lon)
+, sphere_num_vertices((sphere_num_lat + 1) * (sphere_num_lon + 1))
+, sphere_num_indices(6 * sphere_num_lat * sphere_num_lon) {
+  
+  Indices.resize(sphere_num_indices);
+  Vertices.resize(VERTEX_SIZE * sphere_num_vertices);
+  
+  
+  for (int i = 0; i <= sphere_num_lat; i++) {
+    for (int j = 0; j <= sphere_num_lon; j++) {
+      double lat = ((double)i) / sphere_num_lat;
+      double lon = ((double)j) / sphere_num_lon;
+      double *vptr = &Vertices[VERTEX_SIZE * s_index(i, j)];
 
-void init_mesh() {
-  for (int i = 0; i <= SPHERE_NUM_LAT; i++) {
-    for (int j = 0; j <= SPHERE_NUM_LON; j++) {
-      double lat = ((double)i) / SPHERE_NUM_LAT;
-      double lon = ((double)j) / SPHERE_NUM_LON;
-      double *vptr = &Vertices[VERTEX_SIZE * SINDEX(i, j)];
+      double uv_u = lon;
+      double uv_v = lat;
 
-      vptr[TCOORD_OFFSET + 0] = lon;
-      vptr[TCOORD_OFFSET + 1] = 1 - lat;
+      vptr[TCOORD_OFFSET + 0] = uv_u;
+      vptr[TCOORD_OFFSET + 1] = uv_v;
+      
+      // Simple patch to rotate the sphere so by default
+      // the seam is facing away from the camera
+      lon += 0.5;
+      if (lon >= 1.0) {
+        lon -= 1.0;
+      }
 
       lat *= M_PI;
       lon *= 2 * M_PI;
-      double sinlat = sin(lat);
 
-      vptr[NORMAL_OFFSET + 0] = vptr[VERTEX_OFFSET + 0] = sinlat * sin(lon);
-      vptr[NORMAL_OFFSET + 1] = vptr[VERTEX_OFFSET + 1] = cos(lat),
-                           vptr[NORMAL_OFFSET + 2] = vptr[VERTEX_OFFSET + 2] =
-                               sinlat * cos(lon);
+      // Vertex and normals are actually the same here
+      vptr[NORMAL_OFFSET + 0] = vptr[VERTEX_OFFSET + 0] = sin(lat) * sin(lon);
+      vptr[NORMAL_OFFSET + 1] = vptr[VERTEX_OFFSET + 1] = cos(lat);
+      vptr[NORMAL_OFFSET + 2] = vptr[VERTEX_OFFSET + 2] = sin(lat) * cos(lon);
+      
+      // Compute tangents (take partial derivative with respect to longitude, normalize)
+      vptr[TANGEN_OFFSET + 0] = cos(lon);
+      vptr[TANGEN_OFFSET + 1] = 0;
+      vptr[TANGEN_OFFSET + 2] = -sin(lon);
     }
   }
 
-  for (int i = 0; i < SPHERE_NUM_LAT; i++) {
-    for (int j = 0; j < SPHERE_NUM_LON; j++) {
-      unsigned int *iptr = &Indices[6 * (SPHERE_NUM_LON * i + j)];
+  for (int i = 0; i < sphere_num_lat; i++) {
+    for (int j = 0; j < sphere_num_lon; j++) {
+      unsigned int *iptr = &Indices[6 * (sphere_num_lon * i + j)];
 
-      unsigned int i00 = SINDEX(i, j);
-      unsigned int i10 = SINDEX(i + 1, j);
-      unsigned int i11 = SINDEX(i + 1, j + 1);
-      unsigned int i01 = SINDEX(i, j + 1);
+      unsigned int i00 = s_index(i, j);
+      unsigned int i10 = s_index(i + 1, j);
+      unsigned int i11 = s_index(i + 1, j + 1);
+      unsigned int i01 = s_index(i, j + 1);
 
       iptr[0] = i00;
       iptr[1] = i10;
@@ -71,23 +78,22 @@ void init_mesh() {
       iptr[5] = i00;
     }
   }
+  
+  build_data();
 }
 
-void draw_sphere(GLShader &shader, const Vector3D &p, double r) {
-  if (!initialized) {
-    init_mesh();
-    initialized = true;
-  }
+int SphereMesh::s_index(int x, int y) {
+  return ((x) * (sphere_num_lon + 1) + (y));
+}
 
-  Matrix4f model;
-  model << r, 0, 0, p.x, 0, r, 0, p.y, 0, 0, r, p.z, 0, 0, 0, 1;
+void SphereMesh::build_data() {
+  
+  positions = MatrixXf(4, sphere_num_indices * 3);
+  normals = MatrixXf(4, sphere_num_indices * 3);
+  uvs = MatrixXf(2, sphere_num_indices * 3);
+  tangents = MatrixXf(4, sphere_num_indices * 3);
 
-  shader.setUniform("model", model);
-
-  MatrixXf positions(3, SPHERE_NUM_INDICES * 3);
-  MatrixXf normals(3, SPHERE_NUM_INDICES * 3);
-
-  for (int i = 0; i < SPHERE_NUM_INDICES; i += 3) {
+  for (int i = 0; i < sphere_num_indices; i += 3) {
     double *vPtr1 = &Vertices[VERTEX_SIZE * Indices[i]];
     double *vPtr2 = &Vertices[VERTEX_SIZE * Indices[i + 1]];
     double *vPtr3 = &Vertices[VERTEX_SIZE * Indices[i + 2]];
@@ -105,41 +111,56 @@ void draw_sphere(GLShader &shader, const Vector3D &p, double r) {
                 vPtr2[NORMAL_OFFSET + 2]);
     Vector3D n3(vPtr3[NORMAL_OFFSET], vPtr3[NORMAL_OFFSET + 1],
                 vPtr3[NORMAL_OFFSET + 2]);
+        
+    Vector3D uv1(vPtr1[TCOORD_OFFSET], vPtr1[TCOORD_OFFSET + 1], 0);
+    Vector3D uv2(vPtr2[TCOORD_OFFSET], vPtr2[TCOORD_OFFSET + 1], 0);
+    Vector3D uv3(vPtr3[TCOORD_OFFSET], vPtr3[TCOORD_OFFSET + 1], 0);
+    
+    Vector3D t1(vPtr1[TANGEN_OFFSET], vPtr1[TANGEN_OFFSET + 1],
+                vPtr1[TANGEN_OFFSET + 2]);
+    Vector3D t2(vPtr2[TANGEN_OFFSET], vPtr2[TANGEN_OFFSET + 1],
+                vPtr2[TANGEN_OFFSET + 2]);
+    Vector3D t3(vPtr3[TANGEN_OFFSET], vPtr3[TANGEN_OFFSET + 1],
+                vPtr3[TANGEN_OFFSET + 2]);
 
-    positions.col(i) << p1.x, p1.y, p1.z;
-    positions.col(i + 1) << p2.x, p2.y, p2.z;
-    positions.col(i + 2) << p3.x, p3.y, p3.z;
+    positions.col(i    ) << p1.x, p1.y, p1.z, 1.0;
+    positions.col(i + 1) << p2.x, p2.y, p2.z, 1.0;
+    positions.col(i + 2) << p3.x, p3.y, p3.z, 1.0;
 
-    normals.col(i) << n1.x, n1.y, n1.z;
-    normals.col(i + 1) << n2.x, n2.y, n2.z;
-    normals.col(i + 2) << n3.x, n3.y, n3.z;
+    normals.col(i    ) << n1.x, n1.y, n1.z, 0.0;
+    normals.col(i + 1) << n2.x, n2.y, n2.z, 0.0;
+    normals.col(i + 2) << n3.x, n3.y, n3.z, 0.0;
+    
+    uvs.col(i    ) << uv1.x, uv1.y;
+    uvs.col(i + 1) << uv2.x, uv2.y;
+    uvs.col(i + 2) << uv3.x, uv3.y;
+    
+    tangents.col(i    ) << t1.x, t1.y, t1.z, 0.0;
+    tangents.col(i + 1) << t2.x, t2.y, t2.z, 0.0;
+    tangents.col(i + 2) << t3.x, t3.y, t3.z, 0.0;
   }
+}
+
+void SphereMesh::draw_sphere(GLShader &shader, const Vector3D &p, double r) {
+
+  Matrix4f model;
+  model << r, 0, 0, p.x, 0, r, 0, p.y, 0, 0, r, p.z, 0, 0, 0, 1;
+
+  shader.setUniform("u_model", model);
+
 
   shader.uploadAttrib("in_position", positions);
-  shader.uploadAttrib("in_normal", normals);
-
-  shader.drawArray(GL_TRIANGLES, 0, SPHERE_NUM_INDICES);
-
-  /*
-  TODO: when I use this scratch code to render the mesh using the more efficient
-        glDrawElements, it works for a single frame and then fails on all
-        successive frames. Any opengl experts care to figure out why?
-  glEnableClientState(GL_NORMAL_ARRAY);
-  glEnableClientState(GL_VERTEX_ARRAY);
-  glEnable(GL_NORMALIZE);
-  for (int i = 0; i < SPHERE_NUM_VERTICES; i++) {
-    normals[3 * i] = Vertices[8 * i + 2];
-    normals[3 * i + 1] = Vertices[8 * i + 3];
-    normals[3 * i + 2] = Vertices[8 * i + 4];
-    vertices[3 * i] = Vertices[8 * i + 5];
-    vertices[3 * i + 1] = Vertices[8 * i + 6];
-    vertices[3 * i + 2] = Vertices[8 * i + 7];
+  if (shader.attrib("in_normal", false) != -1) {
+    shader.uploadAttrib("in_normal", normals);
+  }
+  if (shader.attrib("in_uv", false) != -1) {
+    shader.uploadAttrib("in_uv", uvs);
+  }
+  if (shader.attrib("in_tangent", false) != -1) {
+    shader.uploadAttrib("in_tangent", tangents, false);
   }
 
-  glVertexPointer(3, GL_DOUBLE, 0, vertices);
-  glNormalPointer(GL_DOUBLE, 0, normals);
-  glDrawElements(GL_TRIANGLES, SPHERE_NUM_INDICES, GL_UNSIGNED_INT, Indices);
-  */
+  shader.drawArray(GL_TRIANGLES, 0, sphere_num_indices);
 }
 
 } // namespace Misc

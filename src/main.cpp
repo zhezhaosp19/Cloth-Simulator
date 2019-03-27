@@ -1,11 +1,16 @@
-#include <getopt.h>
 #include <iostream>
 #include <fstream>
 #include <nanogui/nanogui.h>
 #include <stdio.h>
 #include <stdlib.h>
+#ifdef _WIN32
+#include "misc/getopt.h" // getopt for windows
+#else
+#include <getopt.h>
 #include <unistd.h>
+#endif
 #include <unordered_set>
+#include <stdlib.h> // atoi for getopt inputs
 
 #include "CGL/CGL.h"
 #include "collision/plane.h"
@@ -13,6 +18,7 @@
 #include "cloth.h"
 #include "clothSimulator.h"
 #include "json.hpp"
+#include "misc/file_utils.h"
 
 typedef uint32_t gid_t;
 
@@ -135,7 +141,12 @@ void setGLFWCallbacks() {
 void usageError(const char *binaryName) {
   printf("Usage: %s [options]\n", binaryName);
   printf("Required program options:\n");
-  printf("  -f     <STRING>    Filename of scene");
+  printf("  -f     <STRING>    Filename of scene\n");
+  printf("  -r     <STRING>    Project root.\n");
+  printf("                     Should contain \"shaders/Default.vert\".\n");
+  printf("                     Automatically searched for by default.\n");
+  printf("  -a     <INT>       Sphere vertices latitude direction.\n");
+  printf("  -o     <INT>       Sphere vertices longitude direction.\n");
   printf("\n");
   exit(-1);
 }
@@ -145,9 +156,12 @@ void incompleteObjectError(const char *object, const char *attribute) {
   exit(-1);
 }
 
-void loadObjectsFromFile(string filename, Cloth *cloth, ClothParameters *cp, vector<CollisionObject *>* objects) {
+bool loadObjectsFromFile(string filename, Cloth *cloth, ClothParameters *cp, vector<CollisionObject *>* objects, int sphere_num_lat, int sphere_num_lon) {
   // Read JSON from file
   ifstream i(filename);
+  if (!i.good()) {
+    return false;
+  }
   json j;
   i >> j;
 
@@ -311,7 +325,7 @@ void loadObjectsFromFile(string filename, Cloth *cloth, ClothParameters *cp, vec
         incompleteObjectError("sphere", "friction");
       }
 
-      Sphere *s = new Sphere(origin, radius, friction);
+      Sphere *s = new Sphere(origin, radius, friction, sphere_num_lat, sphere_num_lon);
       objects->push_back(s);
     } else { // PLANE
       Vector3D point, normal;
@@ -346,28 +360,108 @@ void loadObjectsFromFile(string filename, Cloth *cloth, ClothParameters *cp, vec
   }
 
   i.close();
+  
+  return true;
+}
+
+bool is_valid_project_root(const std::string& search_path) {
+    std::stringstream ss;
+    ss << search_path;
+    ss << "/";
+    ss << "shaders/Default.vert";
+    
+    return FileUtils::file_exists(ss.str());
+}
+
+// Attempt to locate the project root automatically
+bool find_project_root(const std::vector<std::string>& search_paths, std::string& retval) {
+  
+  for (std::string search_path : search_paths) {
+    if (is_valid_project_root(search_path)) {
+      retval = search_path;
+      return true;
+    }
+  }
+  return false;
 }
 
 int main(int argc, char **argv) {
+  // Attempt to find project root
+  std::vector<std::string> search_paths = {
+    ".",
+    "..",
+    "../.."
+  };
+  std::string project_root;
+  bool found_project_root = find_project_root(search_paths, project_root);
+  
   Cloth cloth;
   ClothParameters cp;
   vector<CollisionObject *> objects;
-
-  if (argc == 1) { // No arguments, default initialization
-    string default_file_name = "../scene/pinned2.json";
-    loadObjectsFromFile(default_file_name, &cloth, &cp, &objects);
-  } else {
-    int c;
-
-    while ((c = getopt (argc, argv, "f:")) != -1) {
-      switch (c) {
-        case 'f':
-          loadObjectsFromFile(optarg, &cloth, &cp, &objects);
-          break;
-        default:
-          usageError(argv[0]);
+  
+  int c;
+  
+  int sphere_num_lat = 40;
+  int sphere_num_lon = 40;
+  
+  std::string file_to_load_from;
+  bool file_specified = false;
+  
+  while ((c = getopt (argc, argv, "f:r:a:o:")) != -1) {
+    switch (c) {
+      case 'f': {
+        file_to_load_from = optarg;
+        file_specified = true;
+        break;
+      }
+      case 'r': {
+        project_root = optarg;
+        if (!is_valid_project_root(project_root)) {
+          std::cout << "Warn: Could not find required file \"shaders/Default.vert\" in specified project root: " << project_root << std::endl;
+        }
+        found_project_root = true;
+        break;
+      }
+      case 'a': {
+        int arg_int = atoi(optarg);
+        if (arg_int < 1) {
+          arg_int = 1;
+        }
+        sphere_num_lat = arg_int;
+        break;
+      }
+      case 'o': {
+        int arg_int = atoi(optarg);
+        if (arg_int < 1) {
+          arg_int = 1;
+        }
+        sphere_num_lon = arg_int;
+        break;
+      }
+      default: {
+        usageError(argv[0]);
+        break;
       }
     }
+  }
+  
+  if (!found_project_root) {
+    std::cout << "Error: Could not find required file \"shaders/Default.vert\" anywhere!" << std::endl;
+    return -1;
+  } else {
+    std::cout << "Loading files starting from: " << project_root << std::endl;
+  }
+
+  if (!file_specified) { // No arguments, default initialization
+    std::stringstream def_fname;
+    def_fname << project_root;
+    def_fname << "/scene/pinned2.json";
+    file_to_load_from = def_fname.str();
+  }
+  
+  bool success = loadObjectsFromFile(file_to_load_from, &cloth, &cp, &objects, sphere_num_lat, sphere_num_lon);
+  if (!success) {
+    std::cout << "Warn: Unable to load from file: " << file_to_load_from << std::endl;
   }
 
   glfwSetErrorCallback(error_callback);
@@ -379,7 +473,7 @@ int main(int argc, char **argv) {
   cloth.buildClothMesh();
 
   // Initialize the ClothSimulator object
-  app = new ClothSimulator(screen);
+  app = new ClothSimulator(project_root, screen);
   app->loadCloth(&cloth);
   app->loadClothParameters(&cp);
   app->loadCollisionObjects(&objects);

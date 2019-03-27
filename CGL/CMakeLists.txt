@@ -30,7 +30,7 @@ set(CGL_INCLUDE_DIRS "${CGL_SOURCE_DIR}/include")
 if(APPLE)
 
   # Clang only
-  if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "CLANG")
+  if(${CMAKE_CXX_COMPILER_ID} STREQUAL "CLANG")
 
     # OSX Framework dependencies
     if(NOT CGL_BUILD_SHARED)
@@ -41,7 +41,7 @@ if(APPLE)
     endif()
 
     # Clang configuration
-    if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "AppleClang")
+    if(${CMAKE_CXX_COMPILER_ID} STREQUAL "AppleClang")
 
       set(CLANG_CXX_FLAGS "-std=c++11 -m64")
 
@@ -59,7 +59,7 @@ if(APPLE)
     endif()
 
     # GCC configuration
-    if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
+    if(${CMAKE_CXX_COMPILER_ID} STREQUAL "GNU")
 
       set(GCC_CXX_FLAGS "-std=gnu++11 -m64")
 
@@ -81,11 +81,10 @@ endif(APPLE)
 ##################
 # Build on Linux #
 ##################
-set(LINUX UNIX AND NOT APPLE)
-if(LINUX)
+if(UNIX AND NOT APPLE)
 
   # GCC only
-  if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
+  if(${CMAKE_CXX_COMPILER_ID} STREQUAL "GNU")
 
     set(GCC_CXX_FLAGS "-std=gnu++11 -m64")
 
@@ -117,7 +116,7 @@ if(LINUX)
 
   endif()
 
-endif(LINUX)
+endif()
 
 ####################
 # Build on Windows #
@@ -126,7 +125,7 @@ if(WIN32)
 
   if(MSVC)
 
-    set(MSVC_CXX_FLAGS "-std=gnu++11")
+    set(MSVC_CXX_FLAGS "-std=c++11")
 
     if(CGL_BUILD_DEBUG)
         set(CMAKE_BUILD_TYPE Debug)
@@ -135,11 +134,13 @@ if(WIN32)
 
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${MSVC_CXX_FLAGS}")
 
+    add_subdirectory("${CGL_SOURCE_DIR}/deps/freetype") 
+
   endif(MSVC)
 
   if(MINGW)
 
-    set(MSVC_CXX_FLAGS "-std=gnu++11")
+    set(MSVC_CXX_FLAGS "-std=c++11")
 
     if(CGL_BUILD_DEBUG)
         set(CMAKE_BUILD_TYPE Debug)
@@ -157,7 +158,9 @@ endif(WIN32)
 #-------------------------------------------------------------------------------
 
 # Required packages
-find_package(Freetype REQUIRED)
+if(NOT WIN32)
+  find_package(Freetype REQUIRED)
+endif()
 
 
 #-------------------------------------------------------------------------------

@@ -7,7 +7,6 @@ project(ClothSim)
 option(BUILD_LIBCGL    "Build with libCGL"            ON)
 option(BUILD_DEBUG     "Build with debug settings"    ON)
 option(BUILD_DOCS      "Build documentation"          OFF)
-option(ENABLE_TESTS    "Enable testing"               OFF)
 
 #-------------------------------------------------------------------------------
 # Platform-specific settings
@@ -67,8 +66,7 @@ endif(APPLE)
 ##################
 # Build on Linux #
 ##################
-set(LINUX UNIX AND NOT APPLE)
-if(LINUX)
+if(UNIX AND NOT APPLE)
 
   # GCC only
   if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
@@ -106,12 +104,20 @@ if(LINUX)
 
   endif()
 
-endif(LINUX)
+endif()
 
 ####################
 # Build on Windows #
 ####################
 if(WIN32)
+
+  # EIGEN fix:
+  # See "Cause 4" here:
+  # https://eigen.tuxfamily.org/dox/group__TopicUnalignedArrayAssert.html
+
+  # NOTE: future maintainers, you may want to use add_compile_definitions instead.
+  # this was added because too many students are using old CMake (<3.12) versions.
+  add_definitions(/DEIGEN_DONT_ALIGN)
 
   if(MSVC)
 
@@ -120,10 +126,11 @@ if(WIN32)
     if(BUILD_DEBUG)
         set(CMAKE_BUILD_TYPE Debug)
     else(BUILD_DEBUG)
+        set(CMAKE_BUILD_TYPE Release)
     endif(BUILD_DEBUG)
 
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${MSVC_CXX_FLAGS}")
-
+    
   endif(MSVC)
 
   if(MINGW)
@@ -133,6 +140,7 @@ if(WIN32)
     if(BUILD_DEBUG)
         set(CMAKE_BUILD_TYPE Debug)
     else(BUILD_DEBUG)
+        set(CMAKE_BUILD_TYPE Release)
     endif(BUILD_DEBUG)
 
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${MSVC_CXX_FLAGS}")
@@ -158,6 +166,21 @@ include_directories(ext/nanogui/include)
 # For reliability of parallel build, make the NanoGUI targets dependencies
 set_property(TARGET glfw glfw_objects nanogui PROPERTY FOLDER "dependencies")
 
+# For Windows, set the library output directory to put the DLL's next
+# to the binary. I tried to use add_custom_command to just do a copy as a
+# POST_BUILD setting, but for some reason no matter what the command does,
+# Visual Studio will complain about its solution file being modified?
+# In the interest of avoiding the flood of Piazza posts inquiring about this,
+# we take the more robust route.
+if(WIN32)
+  # Also worth mentioning is that since NANOGUI produces a DLL on windows,
+  # it is considered a "RUNTIME" and not a "LIBRARY" target according to CMake.
+  # See https://cmake.org/cmake/help/v3.0/prop_tgt/RUNTIME_OUTPUT_DIRECTORY.html
+  # > For DLL platforms the DLL part of a shared library is treated as a runtime target
+  set_target_properties(nanogui PROPERTIES
+        RUNTIME_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR})
+endif(WIN32)
+
 #-------------------------------------------------------------------------------
 # Find dependencies
 #-------------------------------------------------------------------------------
@@ -165,7 +188,9 @@ set_property(TARGET glfw glfw_objects nanogui PROPERTY FOLDER "dependencies")
 # Required packages
 find_package(OpenGL REQUIRED)
 find_package(Threads REQUIRED)
-find_package(Freetype REQUIRED)
+if(NOT WIN32)
+  find_package(Freetype REQUIRED)
+endif()
 
 # CGL
 if(BUILD_LIBCGL)
@@ -190,11 +215,3 @@ endif()
 
 # Install settings
 set(CMAKE_INSTALL_PREFIX "${ClothSim_SOURCE_DIR}/")
-
-# Test settings
-
-if(ENABLE_TESTS)
-  include_directories(${CATCH_INCLUDE_DIR} ${COMMON_INCLUDES})
-  enable_testing(true)
-  add_subdirectory(test)
-endif()
