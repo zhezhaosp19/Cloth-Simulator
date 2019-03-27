@@ -59,6 +59,9 @@ void Cloth::simulate(double frames_per_sec, double simulation_steps, ClothParame
 }
 
 void Cloth::build_spatial_map() {
+  for (const auto &entry : map) {
+    delete(entry.second);
+  }
   map.clear();
 
   // TODO (Part 4): Build a spatial map out of all of the point masses.
