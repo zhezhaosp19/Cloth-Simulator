@@ -12,6 +12,8 @@
 #include "collision/sphere.h"
 #include "misc/camera_info.h"
 #include "misc/file_utils.h"
+// Needed to generate stb_image binaries. Should only define in exactly one source file importing stb_image.h.
+#define STB_IMAGE_IMPLEMENTATION
 #include "misc/stb_image.h"
 
 using namespace nanogui;
