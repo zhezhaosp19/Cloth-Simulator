@@ -1,6 +1,9 @@
 # Cruft
 .DS_Store
 
+# Visual Studio
+Win32/*
+
 # Prerequisites
 *.d
 

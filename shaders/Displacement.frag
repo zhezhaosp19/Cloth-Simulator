@@ -21,7 +21,7 @@ out vec4 out_color;
 
 float h(vec2 uv) {
   // You may want to use this helper function...
-  return 0;
+  return 0.0;
 }
 
 void main() {
