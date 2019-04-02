@@ -450,18 +450,18 @@ Matrix4f ClothSimulator::getProjectionMatrix() {
   Matrix4f perspective;
   perspective.setZero();
 
-  double near = camera.near_clip();
-  double far = camera.far_clip();
+  double _near = camera.near_clip();
+  double _far = camera.far_clip();
 
   double theta = camera.v_fov() * M_PI / 360;
-  double range = far - near;
+  double range = _far - _near;
   double invtan = 1. / tanf(theta);
 
   perspective(0, 0) = invtan / camera.aspect_ratio();
   perspective(1, 1) = invtan;
-  perspective(2, 2) = -(near + far) / range;
+  perspective(2, 2) = -(_near + _far) / range;
   perspective(3, 2) = -1;
-  perspective(2, 3) = -2 * near * far / range;
+  perspective(2, 3) = -2 * _near * _far / range;
   perspective(3, 3) = 0;
 
   return perspective;
