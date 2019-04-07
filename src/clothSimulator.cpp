@@ -358,6 +358,8 @@ void ClothSimulator::drawWireframe(GLShader &shader) {
   //shader.uploadAttrib("in_normal", normals);
 
   shader.drawArray(GL_LINES, 0, num_springs * 2);
+
+  shader.freeAttrib("in_position");
 }
 
 void ClothSimulator::drawNormals(GLShader &shader) {
@@ -390,6 +392,9 @@ void ClothSimulator::drawNormals(GLShader &shader) {
   shader.uploadAttrib("in_normal", normals, false);
 
   shader.drawArray(GL_TRIANGLES, 0, num_tris * 3);
+
+  shader.freeAttrib("in_position");
+  shader.freeAttrib("in_normal");
 }
 
 void ClothSimulator::drawPhong(GLShader &shader) {
@@ -435,6 +440,11 @@ void ClothSimulator::drawPhong(GLShader &shader) {
   shader.uploadAttrib("in_tangent", tangents, false);
 
   shader.drawArray(GL_TRIANGLES, 0, num_tris * 3);
+
+  shader.freeAttrib("in_position");
+  shader.freeAttrib("in_normal");
+  shader.freeAttrib("in_uv");
+  shader.freeAttrib("in_tangent");
 }
 
 // ----------------------------------------------------------------------------

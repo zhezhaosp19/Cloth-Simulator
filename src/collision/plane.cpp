@@ -47,4 +47,9 @@ void Plane::render(GLShader &shader) {
   }
 
   shader.drawArray(GL_TRIANGLE_STRIP, 0, 4);
+
+  shader.freeAttrib("in_position");
+  if (shader.attrib("in_normal", false) != -1) {
+    shader.freeAttrib("in_normal");
+  }
 }
