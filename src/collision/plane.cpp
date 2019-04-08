@@ -3,6 +3,7 @@
 
 #include "../clothMesh.h"
 #include "../clothSimulator.h"
+#include "../leak_fix.h"
 #include "plane.h"
 
 using namespace std;
@@ -47,9 +48,10 @@ void Plane::render(GLShader &shader) {
   }
 
   shader.drawArray(GL_TRIANGLE_STRIP, 0, 4);
-
+#ifdef LEAK_PATCH_ON
   shader.freeAttrib("in_position");
   if (shader.attrib("in_normal", false) != -1) {
     shader.freeAttrib("in_normal");
   }
+#endif
 }

@@ -5,6 +5,7 @@
 #include <nanogui/nanogui.h>
 
 #include "clothSimulator.h"
+#include "leak_fix.h"
 
 #include "camera.h"
 #include "cloth.h"
@@ -359,7 +360,9 @@ void ClothSimulator::drawWireframe(GLShader &shader) {
 
   shader.drawArray(GL_LINES, 0, num_springs * 2);
 
+#ifdef LEAK_PATCH_ON
   shader.freeAttrib("in_position");
+#endif
 }
 
 void ClothSimulator::drawNormals(GLShader &shader) {
@@ -392,9 +395,10 @@ void ClothSimulator::drawNormals(GLShader &shader) {
   shader.uploadAttrib("in_normal", normals, false);
 
   shader.drawArray(GL_TRIANGLES, 0, num_tris * 3);
-
+#ifdef LEAK_PATCH_ON
   shader.freeAttrib("in_position");
   shader.freeAttrib("in_normal");
+#endif
 }
 
 void ClothSimulator::drawPhong(GLShader &shader) {
@@ -440,11 +444,12 @@ void ClothSimulator::drawPhong(GLShader &shader) {
   shader.uploadAttrib("in_tangent", tangents, false);
 
   shader.drawArray(GL_TRIANGLES, 0, num_tris * 3);
-
+#ifdef LEAK_PATCH_ON
   shader.freeAttrib("in_position");
   shader.freeAttrib("in_normal");
   shader.freeAttrib("in_uv");
   shader.freeAttrib("in_tangent");
+#endif
 }
 
 // ----------------------------------------------------------------------------
