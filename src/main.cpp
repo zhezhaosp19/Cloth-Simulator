@@ -390,7 +390,8 @@ int main(int argc, char **argv) {
   std::vector<std::string> search_paths = {
     ".",
     "..",
-    "../.."
+    "../..",
+    "../../.."
   };
   std::string project_root;
   bool found_project_root = find_project_root(search_paths, project_root);
