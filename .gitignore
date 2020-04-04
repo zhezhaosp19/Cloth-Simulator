@@ -37,3 +37,4 @@ Win32/*
 *.out
 *.app
 build
+xcode

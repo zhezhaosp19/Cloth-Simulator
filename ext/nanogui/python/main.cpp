@@ -37,7 +37,8 @@ namespace {
 }
 #endif
 
-extern void register_constants(py::module &m);
+extern void register_constants_glfw(py::module &m);
+extern void register_constants_entypo(py::module &m);
 extern void register_eigen(py::module &m);
 extern void register_widget(py::module &m);
 extern void register_layout(py::module &m);
@@ -45,6 +46,7 @@ extern void register_basics(py::module &m);
 extern void register_button(py::module &m);
 extern void register_tabs(py::module &m);
 extern void register_textbox(py::module &m);
+extern void register_theme(py::module &m);
 extern void register_glcanvas(py::module &m);
 extern void register_formhelper(py::module &m);
 extern void register_misc(py::module &m);
@@ -110,8 +112,8 @@ static void sigint_handler(int sig) {
 }
 #endif
 
-PYBIND11_PLUGIN(nanogui) {
-    py::module m("nanogui", "NanoGUI plugin");
+PYBIND11_MODULE(nanogui, m) {
+    m.attr("__doc__") = "NanoGUI plugin";
 
     py::class_<MainloopHandle>(m, "MainloopHandle")
         .def("join", &MainloopHandle::join);
@@ -119,7 +121,7 @@ PYBIND11_PLUGIN(nanogui) {
     m.def("init", &nanogui::init, D(init));
     m.def("shutdown", &nanogui::shutdown, D(shutdown));
     m.def("mainloop", [](int refresh, py::object detach) -> MainloopHandle* {
-        if (detach != py::none()) {
+        if (!detach.is(py::none())) {
             if (handle)
                 throw std::runtime_error("Main loop is already running!");
 
@@ -207,7 +209,8 @@ PYBIND11_PLUGIN(nanogui) {
 
     m.def("leave", &nanogui::leave, D(leave));
     m.def("active", &nanogui::active, D(active));
-    m.def("file_dialog", &nanogui::file_dialog, D(file_dialog));
+    m.def("file_dialog", (std::string(*)(const std::vector<std::pair<std::string, std::string>> &, bool)) &nanogui::file_dialog, D(file_dialog));
+    m.def("file_dialog", (std::vector<std::string>(*)(const std::vector<std::pair<std::string, std::string>> &, bool, bool)) &nanogui::file_dialog, D(file_dialog, 2));
     #if defined(__APPLE__)
         m.def("chdir_to_bundle_parent", &nanogui::chdir_to_bundle_parent);
     #endif
@@ -232,7 +235,8 @@ PYBIND11_PLUGIN(nanogui) {
         .value("Horizontal", Orientation::Horizontal)
         .value("Vertical", Orientation::Vertical);
 
-    register_constants(m);
+    register_constants_glfw(m);
+    register_constants_entypo(m);
     register_eigen(m);
     register_widget(m);
     register_layout(m);
@@ -240,13 +244,12 @@ PYBIND11_PLUGIN(nanogui) {
     register_button(m);
     register_tabs(m);
     register_textbox(m);
+    register_theme(m);
     register_glcanvas(m);
     register_formhelper(m);
     register_misc(m);
     register_glutil(m);
     register_nanovg(m);
-
-    return m.ptr();
 }
 
 #endif
