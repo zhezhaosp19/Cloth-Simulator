@@ -1,0 +1,464 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+<style>
+  body {
+    padding: 100px;
+    width: 1200px;
+    margin: auto;
+    text-align: left;
+    font-weight: 300;
+    font-family: 'Open Sans', sans-serif;
+    color: #121212;
+  }
+  h1, h2, h3, h4 {
+    font-family: 'Source Sans Pro', sans-serif;
+  }
+</style>
+<title>CS 184 Mesh Editor</title>
+<meta http-equiv="content-type" content="text/html; charset=utf-8" />
+<link href="https://fonts.googleapis.com/css?family=Open+Sans|Source+Sans+Pro" rel="stylesheet">
+</head>
+
+
+<body>
+
+<h1 align="middle">CS 184: Computer Graphics and Imaging, Spring 2020</h1>
+<h1 align="middle">Project 4: Cloth Simulator</h1>
+<h2 align="middle">Zhe Zhao, CS284</h2>
+
+<br><br>
+
+<div>
+
+<h2 align="middle">Overview</h2>
+<p>In this project, I implement a cloth simulator using mass and spring system. I firstly add point masses to a <code>point_mass</code> vector and then add three springs types between two point masses to spring vectors. Next, I implement the collision simulation between cloth and other objects and itself. I also implement shaders for the cloth. After this project, I am able to translate physics to codes.</p>
+
+<h2 align="middle">Part I: Masses and springs</h2>
+<p>In the part1, I implement <code>Cloth::buildGrid()</code> function where I build point masses and springs between them with STRUCTURAL, SHEARING, or BENDING constraints. </p>
+<br>
+<div align="center">
+    <table style="width=100%">
+        <tr>
+          <td>
+            <img src="images/part1/1.jpg" align="middle" width="500px" />
+          </td>
+          <td>
+            <img src="images/part1/2.jpg" align="middle" width="500px" />
+          </td>
+        </tr>
+    </table>
+</div>
+<div align="center">
+    <table style="width=100%">
+      <tr>
+        <td>
+          <figcaption align="middle">Above images show the details of structure of point masses and springs.</figcaption>
+        </td>
+      </tr>
+  </table>
+</div>
+<br>
+<div align="center">
+    <table style="width=100%">
+        <tr>
+          <td>
+            <img src="images/part1/with all constraints.jpg" align="middle" width="400px" />
+            <figcaption align="middle">with all constraints</figcaption>
+          </td>
+          <td>
+            <img src="images/part1/without any shearing constraints.jpg" align="middle" width="400px" />
+            <figcaption align="middle">without any shearing constraints</figcaption>
+          </td>
+          <td>
+            <img src="images/part1/without only shearing constraints.jpg" align="middle" width="400px" />
+            <figcaption align="middle">without only shearing constraints</figcaption>
+          </td>
+        </tr>
+    </table>
+</div>
+<div align="center">
+    <table style="width=100%">
+      <tr>
+        <td>
+          <figcaption align="middle">Above images show the difference springs among different constraints status.</figcaption>
+        </td>
+      </tr>
+  </table>
+</div>
+<br>
+
+<h2 align="middle">Part II: Simulation via numerical integration</h2>
+<p>In the part2, I implement a basic cloth simulation with external forces on each point mass and spring correction forces applying the spring constraints. After the implementation, I can test different values of spring constant <em>ks</em>, <em>damping</em> and <em>density</em>. The default value of the cloth simulation for <em>ks</em>, <em>damping</em> and <em>density</em> are <code>5000</code>, <code>0.2%</code> and <code>15</code> respectively.</p>
+<br>
+<div align="middle">
+  <table style="width=100%">
+    <tr>
+      <td>
+        <video align="middle" width="600px" controls>
+          <source src="images/part2/framework_default.mp4" type=video/mp4>
+        </video>
+      </td>
+      <td>
+        <video align="middle" width="600px" controls>
+          <source src="images/part2/framework_default_shaded.mp4" type=video/mp4>
+        </video>
+      </td>
+    </tr>
+  </table>
+</div>
+  <br>
+
+  <p>For <em>ks</em>:</p>
+  <p><em>ks</em> represents how stiff the spring is. The smaller value is, the springier spring is; while the larger <em>ks</em> value is, the stiffer spring is. I change <em>ks</em> value small to be <code>50N/m</code>, the cloth is very flexible and springy with more drapes on top and smoother on the bottom. And I also change it wo be high value with is <code>50000N/m</code>, the cloth is more stiff and smoother. After hanging down, there are less drapes on top but having drapes on the bottom.</p>
+  <br>
+  <div align="middle">
+    <table style="width=100%">
+      <tr>
+        <td>
+          <video align="middle" width="600px" controls>
+            <source src="images/part2/ks_50.mp4" type=video/mp4>
+          </video>
+          <figcaption align="middle">k = 50</figcaption>
+        </td>
+        <td>
+          <video align="middle" width="600px" controls>
+            <source src="images/part2/ks_50000.mp4" type=video/mp4>
+          </video>
+          <figcaption align="middle">k = 50000</figcaption>
+        </td>
+      </tr>
+    </table>
+  </div>
+    <br>
+
+    <p>For <em>density:</em></p>
+    <p><em>Density</em> shows the heaviness of the cloth. The smaller <em>density</em> value is, the lighter cloth is; while the larger <em>density</em> value is, the heavier cloth is. When I choose <em>density</em> to be 1, the cloth looks very light, thus it has more drapes on top. When the <em>density</em> is 1500, the cloth looks much heavier, so the cloth hang downs with more drapes on the middle and bottom part.</p>
+    <br>
+    <div align="middle">
+      <table style="width=100%">
+        <tr>
+          <td>
+            <video align="middle" width="600px" controls>
+              <source src="images/part2/density_1.mp4" type=video/mp4>
+            </video>
+            <figcaption align="middle">density = 1</figcaption>
+          </td>
+          <td>
+            <video align="middle" width="600px" controls>
+              <source src="images/part2/density_1500.mp4" type=video/mp4>
+            </video>
+            <figcaption align="middle">density = 1500</figcaption>
+          </td>
+        </tr>
+      </table>
+    </div>
+      <br>
+
+      <p>For <em>damping:</em></p>
+      <p><em>Damping</em> shows how much spring oscillations occur. A small difference of the value makes a huge effect on the cloth simulation. The smaller <em>damping</em> values is, the less energy cloth loses; while the larger value is, the higher loss of energy. With the value super low which is 0.069%, only little energy loses, so the cloth swings around wildly and stops slowly. But when I change it to be large which is 0.828%, the cloth loses large amount of energy, thus it hangs down slowly without much drapes.</p>
+      <br>
+      <div align="middle">
+        <table style="width=100%">
+          <tr>
+            <td>
+              <video align="middle" width="600px" controls>
+                <source src="images/part2/damping_0.069.mp4" type=video/mp4>
+              </video>
+              <figcaption align="middle">damping = 0.069</figcaption>
+            </td>
+            <td>
+              <video align="middle" width="600px" controls>
+                <source src="images/part2/damping_0.828.mp4" type=video/mp4>
+              </video>
+              <figcaption align="middle">damping = 0.828</figcaption>
+            </td>
+          </tr>
+        </table>
+      </div>
+<br>
+
+<h2 align="middle">Part III: Handling collisions with other objects</h2>
+<p>In the part3, I add the <em>cloth collision</em> with other objects in order not to intersect with or even pass through them.</p>
+<br>
+<div align="center">
+    <table style="width=100%">
+        <tr>
+          <td>
+            <img src="images/part3/sphere_500.jpg" align="middle" width="400px" />
+            <figcaption align="middle">ks = 500</figcaption>
+          </td>
+          <td>
+            <img src="images/part3/sphere_5000.jpg" align="middle" width="400px" />
+            <figcaption align="middle">ks = 5000</figcaption>
+          </td>
+          <td>
+            <img src="images/part3/sphere_50000.jpg" align="middle" width="400px" />
+            <figcaption align="middle">ks = 50000</figcaption>
+          </td>
+        </tr>
+    </table>
+</div>
+<br>
+<p>Above images show the cloth on the sphere with different ks values, which are <code>500</code>, <code>5000</code> and <code>50000</code>. The cloth forms differ with each other largely according to different <em>ks</em> values. The smaller <em>ks</em> value is, the bouncier cloth is and looks softer; while the larger <em>ks</em> values is, the cloth looks stiffer.</p>
+<br>
+<div align="center">
+    <table style="width=100%">
+        <tr>
+          <td>
+            <img src="images/part3/plane.jpg" align="middle" width="500px" />
+          </td>
+          <td>
+            <img src="images/part3/plane_bump.jpg" align="middle" width="500px" />
+          </td>
+        </tr>
+    </table>
+</div>
+<br>
+
+<p>Above images are cloth lies on the place peacefully</p>
+<br>
+
+<h2 align="middle">Part IV: Handling self-collisions</h2>
+<p>In the part4, I implement the self-collision of the cloth and it will not interest within itself when folding.</p>
+<div align="center">
+    <table style="width=100%">
+        <tr>
+          <td>
+            <img src="images/part4/1.jpg" align="middle" width="400px" />
+          </td>
+          <td>
+            <img src="images/part4/2.jpg" align="middle" width="400px" />
+          </td>
+          <td>
+            <img src="images/part4/3.jpg" align="middle" width="400px" />
+          </td>
+        <tr>
+      <br>
+        <tr>
+          <td>
+            <img src="images/part4/4.jpg" align="middle" width="400px" />
+          </td>
+          <td>
+            <img src="images/part4/5.jpg" align="middle" width="400px" />
+          </td>
+          <td>
+            <img src="images/part4/6.jpg" align="middle" width="400px" />
+          </td>
+        </tr>
+    </table>
+</div>
+<br>
+<p>I adjust the <em>density</em> value. The lower <em>density</em> value is, the paperier cloth looks and it folds largely; while the higher <em>density</em> value is, it folds smaller.</p>
+<br>
+<div align="middle">
+  <table style="width=100%">
+    <tr>
+      <td>
+        <video align="middle" width="600px" controls>
+          <source src="images/part4/density_1.mp4" type=video/mp4>
+        </video>
+        <figcaption align="middle">density = 1</figcaption>
+      </td>
+      <td>
+        <video align="middle" width="600px" controls>
+          <source src="images/part4/density_150.mp4" type=video/mp4>
+        </video>
+        <figcaption align="middle">density = 150</figcaption>
+      </td>
+    </tr>
+  </table>
+</div>
+<br>
+
+<p>I also change the value of <em>ks</em>. When <code>ks = 50</code>, the cloth is very bouncy and folds over itself many times; while when <code>ks= 50000</code>, the cloth is stiffer and it folds less and lands in its rest position sooner.</p>
+<br>
+<div align="middle">
+  <table style="width=100%">
+    <tr>
+      <td>
+        <video align="middle" width="600px" controls>
+          <source src="images/part4/ks_50.mp4" type=video/mp4>
+        </video>
+        <figcaption align="middle">ks = 50</figcaption>
+      </td>
+      <td>
+        <video align="middle" width="600px" controls>
+          <source src="images/part4/ks_50000.mp4" type=video/mp4>
+        </video>
+        <figcaption align="middle">ks = 50000</figcaption>
+      </td>
+    </tr>
+  </table>
+</div>
+<br>
+
+<h2 align="middle">Part V: Shaders (has its own page, located here)</h2>
+<p>In the part5, I implement a shader program using <em>GLSL</em>. Shader program controls the vertex positions and colors of vectors. It takes in input elements like textures or color parameters and output a 4D vector carrying information of the vertex like colors or displacement of the positions. The <em>vertex shader</em> is for computing spatial element like position, normal and vector, while <em>fragment shader</em> is for computing colors and textures.</p>
+<p><em>Blinn-phong shading model</em> is a reflection model combing with the <em>ambient lighting</em>, <em>diffuse reflection</em> and <em>specular highlights</em>. <em>Ambient lighting</em> casts every vertex in the scene, thus Blinn-phong shading with only ambient lighting is pure grey; <em>diffuse reflection</em> is a shading independent of view direction and ligher with higher <code>kd</code> value; <em>specular highlights</em> models the reflection light and depends on the direction of the viewing direction. </p>
+
+<div align="center">
+    <table style="width=100%">
+        <tr>
+          <td>
+            <img src="images/part5/ambient_0.5.jpg" align="middle" width="500px" />
+            <figcaption align="middle">Ambient only, Ka = 0.5</figcaption>
+          </td>
+          <td>
+            <img src="images/part5/diffuse_1.0.jpg" align="middle" width="500px" />
+            <figcaption align="middle">diffuse only, Kd = 1.0</figcaption>
+          </td>
+        <tr>
+      <br>
+        <tr>
+          <td>
+            <img src="images/part5/specular_1.0_30.0.jpg" align="middle" width="500px" />
+            <figcaption align="middle">dspecular only, Ks = 0.7, p = 30</figcaption>
+          </td>
+          <td>
+            <img src="images/part5/full model.jpg" align="middle" width="500px" />
+            <figcaption align="middle">entire Blinn-phong shading model</figcaption>
+          </td>
+        </tr>
+    </table>
+</div>
+<br>
+
+<p>Then, I implement the <em>texture mapping</em> with my cat photo.</p>
+<div align="center">
+    <table style="width=100%">
+        <tr>
+          <td>
+            <img src="images/part5/texture.jpg" align="middle" width="500px" />
+          </td>
+          <td>
+            <img src="images/part5/texture_1.jpg" align="middle" width="500px" />
+          </td>
+        </tr>
+    </table>
+</div>
+<div align="center">
+    <table style="width=100%">
+      <tr>
+        <td>
+          <figcaption align="middle">Texture mapping with my cat image.</figcaption>
+        </td>
+      </tr>
+  </table>
+</div>
+<br>
+
+<p>Next, I implement <em>bump mapping</em> and <em>displacement mapping</em>. <em>Bump mapping</em> shows the original positions of vertices while <em>displacement mapping</em> changes the positions and normal vectors, which changes the silhouette of the shape.</p>
+<div align="center">
+    <table style="width=100%">
+        <tr>
+          <td>
+            <img src="images/part5/bump_1.jpg" align="middle" width="500px" />
+            <figcaption align="middle">bump mapping</figcaption>
+          </td>
+          <td>
+            <img src="images/part5/bump_2.jpg" align="middle" width="500px" />
+            <figcaption align="middle">bump mapping</figcaption>
+          </td>
+        <tr>
+      <br>
+        <tr>
+          <td>
+            <img src="images/part5/displacement_1.jpg" align="middle" width="500px" />
+            <figcaption align="middle">displacement mapping</figcaption>
+          </td>
+          <td>
+            <img src="images/part5/displacement_2.jpg" align="middle" width="500px" />
+            <figcaption align="middle">displacement mapping</figcaption>
+          </td>
+        </tr>
+    </table>
+</div>
+<br>
+
+<p>I also adjust the sphere mesh's <em>coarseness</em>. Images with <code>-o 16 -a 16</code> show only very slightly difference between bump and displacement mapping of the ball. But images with <code>o 128 -a 128</code> more accurately show the different between bump and displacement mapping, the silhouette of the shape is different.</p>
+<div align="center">
+    <table style="width=100%">
+        <tr>
+          <td>
+            <img src="images/part5/bump_16_1.jpg" align="middle" width="500px" />
+            <figcaption align="middle">bump mapping, coarseness = 16</figcaption>
+          </td>
+          <td>
+            <img src="images/part5/bump_16_2.jpg" align="middle" width="500px" />
+            <figcaption align="middle">bump mapping, coarseness = 16</figcaption>
+          </td>
+        <tr>
+      <br>
+        <tr>
+          <td>
+            <img src="images/part5/displacement_16_1.jpg" align="middle" width="500px" />
+            <figcaption align="middle">displacement mapping, coarseness = 16</figcaption>
+          </td>
+          <td>
+            <img src="images/part5/displacement_16_2.jpg" align="middle" width="500px" />
+            <figcaption align="middle">displacement mapping, coarseness = 16</figcaption>
+          </td>
+        </tr>
+      <br>
+      <tr>
+        <td>
+          <img src="images/part5/bump_128_1.jpg" align="middle" width="500px" />
+          <figcaption align="middle">bump mapping, coarseness = 128</figcaption>
+        </td>
+        <td>
+          <img src="images/part5/bump_128_2.jpg" align="middle" width="500px" />
+          <figcaption align="middle">bump mapping, coarseness = 128</figcaption>
+        </td>
+      <tr>
+    <br>
+      <tr>
+        <td>
+          <img src="images/part5/displacement_128_1.jpg" align="middle" width="500px" />
+          <figcaption align="middle">displacement mapping, coarseness = 128</figcaption>
+        </td>
+        <td>
+          <img src="images/part5/displacement_128_2.jpg" align="middle" width="500px" />
+          <figcaption align="middle">displacement mapping, coarseness = 128</figcaption>
+        </td>
+      </tr>
+    </table>
+</div>
+<br>
+
+<p>Finally, I implement the <em>mirror shader</em>. </p>
+<div align="center">
+    <table style="width=100%">
+        <tr>
+          <td>
+            <img src="images/part5/mirror 2.jpg" align="middle" width="500px" />
+          </td>
+          <td>
+            <img src="images/part5/mirror.jpg" align="middle" width="500px" />
+          </td>
+        </tr>
+    </table>
+</div>
+<div align="center">
+    <table style="width=100%">
+      <tr>
+        <td>
+          <figcaption align="middle">mirror mapping</figcaption>
+        </td>
+      </tr>
+  </table>
+</div>
+<div align="center">
+    <table style="width=100%">
+        <tr>
+          <video align="middle" width="600px" controls>
+            <source src="images/part5/mirror.mp4" type=video/mp4>
+          </video>
+        </tr>
+    </table>
+</div>
+
+
+</div>
+</body>
+</html>

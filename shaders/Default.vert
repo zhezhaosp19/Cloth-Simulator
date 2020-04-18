@@ -2,8 +2,8 @@
 
 // Uniform variables are constant throughout the entire shader
 // execution. They are also read-only to enable parallelization.
-uniform mat4 u_model;
-uniform mat4 u_view_projection;
+uniform mat4 u_model; // model to world/Users/Emma/Documents/UCB/cs284/p4-clothsim-sp20-zhezhaosp19/shaders/Default.vert
+uniform mat4 u_view_projection; // world to screen
 
 // In a vertex shader, the "in" variables are read-only per-vertex 
 // properties. An example of this was shown in the rasterizer project, 
